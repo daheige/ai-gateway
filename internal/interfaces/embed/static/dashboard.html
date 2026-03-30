@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AI Gateway - 控制台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .header { background: #007bff; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .nav { display: flex; gap: 20px; }
+        .nav a { color: white; text-decoration: none; padding: 5px 10px; border-radius: 4px; }
+        .nav a:hover, .nav a.active { background: rgba(255,255,255,0.2); }
+        .logout { background: #dc3545; padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; color: white; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .section { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; display: none; }
+        .section.active { display: block; }
+        h2 { margin-bottom: 20px; color: #333; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 400px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #666; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AI Gateway</h1>
+        <div class="nav">
+            <a href="#" onclick="showSection('apikeys')" class="active">API Keys</a>
+            <a href="#" onclick="showSection('providers')">Providers</a>
+            <a href="#" onclick="showSection('tenants')">租户管理</a>
+            <a href="#" onclick="showSection('logs')">请求日志</a>
+            <a href="#" onclick="showSection('stats')">统计</a>
+            <a href="#" onclick="showSection('metrics')">Metrics</a>
+            <button class="logout" onclick="logout()">退出</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="apikeys" class="section active">
+            <h2>API Keys 管理</h2>
+            <button class="btn" onclick="showModal()">创建 API Key</button>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>租户ID</th><th>名称</th><th>Key</th><th>QPS</th><th>RPM</th><th>月Token限额</th><th>总额度/已用</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody id="keysTable"></tbody>
+            </table>
+        </div>
+
+        <div id="providers" class="section">
+            <h2>Providers 管理</h2>
+            <button class="btn" onclick="showProviderModal()">添加 Provider</button>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>名称</th><th>类型</th><th>Base URL</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody id="providersTable"></tbody>
+            </table>
+        </div>
+
+        <div id="tenants" class="section">
+            <h2>租户管理</h2>
+            <button class="btn" onclick="showTenantModal()">添加租户</button>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>名称</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+                </thead>
+                <tbody id="tenantsTable"></tbody>
+            </table>
+        </div>
+
+        <div id="metrics" class="section">
+            <h2>Metrics</h2>
+            <div id="metricsData"></div>
+        </div>
+
+        <div id="logs" class="section">
+            <h2>请求日志</h2>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>API Key ID</th><th>模型</th><th>Token</th><th>状态</th><th>IP</th><th>时间</th></tr>
+                </thead>
+                <tbody id="logsTable"></tbody>
+            </table>
+            <div id="logsPager" style="margin-top:15px;display:flex;justify-content:space-between;align-items:center;">
+                <span id="logsInfo" style="color:#666;"></span>
+                <div>
+                    <button class="btn" id="logsPrev" onclick="changeLogPage(-1)" disabled>上一页</button>
+                    <button class="btn" id="logsNext" onclick="changeLogPage(1)">下一页</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="stats" class="section">
+            <h2>Token 使用统计</h2>
+            <div id="statsOverview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px;"></div>
+            <h3 style="margin:20px 0 10px;color:#333;">每日Token用量（近30天）</h3>
+            <div id="dailyChart" style="height:200px;display:flex;align-items:flex-end;gap:4px;padding:10px 0;border-bottom:1px solid #ddd;"></div>
+            <h3 style="margin:20px 0 10px;color:#333;">本月Key用量排行</h3>
+            <table>
+                <thead>
+                    <tr><th>API Key ID</th><th>Key前缀</th><th>Token用量</th></tr>
+                </thead>
+                <tbody id="keyStatsTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h2>创建 API Key</h2>
+            <form id="keyForm">
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" id="keyName" required>
+                </div>
+                <div class="form-group">
+                    <label>租户</label>
+                    <select id="keyTenant" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;"></select>
+                </div>
+                <div class="form-group">
+                    <label>Provider</label>
+                    <select id="keyProvider" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;"></select>
+                </div>
+                <div class="form-group">
+                    <label>Key前缀（默认sk）</label>
+                    <input type="text" id="keyPrefix" placeholder="sk" value="sk">
+                </div>
+                <div class="form-group">
+                    <label>每秒限流 QPS（0为不限）</label>
+                    <input type="number" id="rateLimitPerSec" value="10">
+                </div>
+                <div class="form-group">
+                    <label>每分钟限流 RPM</label>
+                    <input type="number" id="rateLimit" value="60">
+                </div>
+                <div class="form-group">
+                    <label>每月Token限额（0为不限）</label>
+                    <input type="number" id="monthlyTokenLimit" value="0">
+                </div>
+                <div class="form-group">
+                    <label>总Token额度（0为不限，用完即止）</label>
+                    <input type="number" id="totalTokenQuota" value="0">
+                </div>
+                <button type="submit" class="btn">创建</button>
+                <button type="button" class="btn btn-danger" onclick="hideModal()">取消</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="providerModal" class="modal">
+        <div class="modal-content">
+            <h2>添加 Provider</h2>
+            <form id="providerForm">
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" id="providerName" required>
+                </div>
+                <div class="form-group">
+                    <label>类型</label>
+                    <input type="text" id="providerType" placeholder="openai/claude/gemini" required>
+                </div>
+                <div class="form-group">
+                    <label>Base URL</label>
+                    <input type="text" id="baseURL">
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" id="providerAPIKey">
+                </div>
+                <div class="form-group">
+                    <label>支持模型（逗号分隔）</label>
+                    <input type="text" id="models">
+                </div>
+                <button type="submit" class="btn">创建</button>
+                <button type="button" class="btn btn-danger" onclick="hideProviderModal()">取消</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="tenantModal" class="modal">
+        <div class="modal-content">
+            <h2>添加租户</h2>
+            <form id="tenantForm">
+                <div class="form-group">
+                    <label>租户名称</label>
+                    <input type="text" id="tenantName" required>
+                </div>
+                <button type="submit" class="btn">创建</button>
+                <button type="button" class="btn btn-danger" onclick="hideTenantModal()">取消</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(name).classList.add('active');
+            document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+            if (name === 'apikeys') loadKeys();
+            if (name === 'providers') loadProviders();
+            if (name === 'tenants') loadTenants();
+            if (name === 'logs') loadLogs();
+            if (name === 'stats') loadStats();
+            if (name === 'metrics') loadMetrics();
+        }
+
+        function showModal() {
+            loadProvidersForSelect();
+            loadTenantsForSelect();
+            document.getElementById('modal').classList.add('show');
+        }
+        function hideModal() { document.getElementById('modal').classList.remove('show'); }
+        function showProviderModal() { document.getElementById('providerModal').classList.add('show'); }
+        function hideProviderModal() { document.getElementById('providerModal').classList.remove('show'); }
+        function showTenantModal() { document.getElementById('tenantModal').classList.add('show'); }
+        function hideTenantModal() { document.getElementById('tenantModal').classList.remove('show'); }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+
+        async function loadKeys() {
+            const res = await fetch('/api/keys', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const keys = await res.json();
+            const html = keys.map(k => `
+                <tr>
+                    <td>${k.id}</td>
+                    <td>${k.tenant_id}</td>
+                    <td>${k.name}</td>
+                    <td>${k.key_prefix}</td>
+                    <td>${k.rate_limit_per_sec === 0 ? '不限' : k.rate_limit_per_sec}</td>
+                    <td>${k.rate_limit}</td>
+                    <td>${k.monthly_token_limit === 0 ? '不限' : k.monthly_token_limit.toLocaleString()}</td>
+                    <td>${k.total_token_quota === 0 ? '不限' : k.tokens_consumed.toLocaleString() + '/' + k.total_token_quota.toLocaleString()}</td>
+                    <td>${k.status === 1 ? '启用' : '禁用'}</td>
+                    <td><button class="btn btn-danger" onclick="deleteKey(${k.id})">删除</button></td>
+                </tr>
+            `).join('');
+            document.getElementById('keysTable').innerHTML = html;
+        }
+
+        async function deleteKey(id) {
+            if (!confirm('确认删除？')) return;
+            await fetch('/api/keys/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            loadKeys();
+        }
+
+        let logsPage = 1;
+        const logsLimit = 20;
+
+        async function loadLogs() {
+            const res = await fetch('/api/logs?limit=' + logsLimit + '&page=' + logsPage, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const result = await res.json();
+            const logs = result.data || [];
+            const total = result.total || 0;
+            const totalPages = Math.ceil(total / logsLimit) || 1;
+
+            const html = logs.map(l => `
+                <tr>
+                    <td>${l.id}</td>
+                    <td>${l.api_key_id}</td>
+                    <td>${l.model || '-'}</td>
+                    <td>${l.tokens_used}</td>
+                    <td>${l.status}</td>
+                    <td>${l.ip}</td>
+                    <td>${new Date(l.created_at).toLocaleString()}</td>
+                </tr>
+            `).join('');
+            document.getElementById('logsTable').innerHTML = html;
+            document.getElementById('logsInfo').textContent = '第 ' + logsPage + '/' + totalPages + ' 页，共 ' + total + ' 条';
+            document.getElementById('logsPrev').disabled = logsPage <= 1;
+            document.getElementById('logsNext').disabled = logsPage >= totalPages;
+        }
+
+        function changeLogPage(delta) {
+            logsPage += delta;
+            if (logsPage < 1) logsPage = 1;
+            loadLogs();
+        }
+
+        async function loadProviders() {
+            const res = await fetch('/api/providers', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const providers = await res.json();
+            const html = providers.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.type}</td>
+                    <td>${p.base_url || '-'}</td>
+                    <td>${p.status === 1 ? '启用' : '禁用'}</td>
+                    <td><button class="btn btn-danger" onclick="deleteProvider(${p.id})">删除</button></td>
+                </tr>
+            `).join('');
+            document.getElementById('providersTable').innerHTML = html;
+        }
+
+        async function deleteProvider(id) {
+            if (!confirm('确认删除？')) return;
+            await fetch('/api/providers/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            loadProviders();
+        }
+
+        async function loadTenants() {
+            const res = await fetch('/api/tenants', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const tenants = await res.json();
+            const html = tenants.map(t => `
+                <tr>
+                    <td>${t.id}</td>
+                    <td>${t.name}</td>
+                    <td>${t.status === 1 ? '启用' : '禁用'}</td>
+                    <td>${new Date(t.created_at).toLocaleString()}</td>
+                    <td>
+                        <button class="btn" onclick="toggleTenantStatus(${t.id}, ${t.status})">${t.status === 1 ? '禁用' : '启用'}</button>
+                        <button class="btn btn-danger" onclick="deleteTenant(${t.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('tenantsTable').innerHTML = html;
+        }
+
+        async function toggleTenantStatus(id, currentStatus) {
+            await fetch('/api/tenants/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: currentStatus === 1 ? 0 : 1 })
+            });
+            loadTenants();
+        }
+
+        async function deleteTenant(id) {
+            if (!confirm('确认删除该租户？')) return;
+            await fetch('/api/tenants/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            loadTenants();
+        }
+
+        async function loadMetrics() {
+            const res = await fetch('/metrics');
+            const data = await res.json();
+            document.getElementById('metricsData').innerHTML = `
+                <p>总请求数: ${data.total_requests}</p>
+                <p>总Token数: ${data.total_tokens}</p>
+                <p>平均延迟: ${data.avg_latency_ms}ms</p>
+            `;
+        }
+
+        async function loadProvidersForSelect() {
+            const res = await fetch('/api/providers', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const providers = await res.json();
+            const html = providers.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            document.getElementById('keyProvider').innerHTML = html;
+        }
+
+        async function loadTenantsForSelect() {
+            const res = await fetch('/api/tenants', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const tenants = await res.json();
+            const html = tenants.map(t => `<option value="${t.id}">${t.name} (ID:${t.id})</option>`).join('');
+            document.getElementById('keyTenant').innerHTML = html;
+        }
+
+        document.getElementById('keyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/api/keys', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: document.getElementById('keyName').value,
+                    tenant_id: parseInt(document.getElementById('keyTenant').value),
+                    provider_id: parseInt(document.getElementById('keyProvider').value),
+                    prefix: document.getElementById('keyPrefix').value,
+                    rate_limit_per_sec: parseInt(document.getElementById('rateLimitPerSec').value),
+                    rate_limit: parseInt(document.getElementById('rateLimit').value),
+                    monthly_token_limit: parseInt(document.getElementById('monthlyTokenLimit').value),
+                    total_token_quota: parseInt(document.getElementById('totalTokenQuota').value)
+                })
+            });
+            const data = await res.json();
+            alert('创建成功！虚拟Key: ' + data.key);
+            hideModal();
+            loadKeys();
+        });
+
+        document.getElementById('providerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await fetch('/api/providers', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: document.getElementById('providerName').value,
+                    type: document.getElementById('providerType').value,
+                    base_url: document.getElementById('baseURL').value,
+                    api_key: document.getElementById('providerAPIKey').value,
+                    models: document.getElementById('models').value
+                })
+            });
+            hideProviderModal();
+            loadProviders();
+        });
+
+        async function loadStats() {
+            const headers = { 'Authorization': 'Bearer ' + token };
+            const [overviewRes, dailyRes, keyRes] = await Promise.all([
+                fetch('/api/stats/overview', { headers }),
+                fetch('/api/stats/daily?days=30', { headers }),
+                fetch('/api/stats/keys', { headers })
+            ]);
+            const overview = await overviewRes.json();
+            const daily = await dailyRes.json();
+            const keyStats = await keyRes.json();
+
+            const cardStyle = 'background:#f8f9fa;padding:20px;border-radius:8px;text-align:center;';
+            document.getElementById('statsOverview').innerHTML = `
+                <div style="${cardStyle}"><div style="font-size:24px;color:#007bff;">${overview.total_tokens_today.toLocaleString()}</div><div style="color:#666;margin-top:5px;">今日Token</div></div>
+                <div style="${cardStyle}"><div style="font-size:24px;color:#28a745;">${overview.total_tokens_month.toLocaleString()}</div><div style="color:#666;margin-top:5px;">本月Token</div></div>
+                <div style="${cardStyle}"><div style="font-size:24px;color:#fd7e14;">${overview.total_requests_today.toLocaleString()} / ${overview.total_requests.toLocaleString()}</div><div style="color:#666;margin-top:5px;">今日/总请求</div></div>
+            `;
+
+            const maxTokens = Math.max(...(daily || []).map(d => d.tokens), 1);
+            document.getElementById('dailyChart').innerHTML = (daily || []).map(d => {
+                const h = Math.max(Math.round(d.tokens / maxTokens * 180), 2);
+                return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;" title="${d.date}: ${d.tokens.toLocaleString()}">
+                    <div style="font-size:10px;color:#666;margin-bottom:4px;">${d.tokens > 0 ? d.tokens.toLocaleString() : ''}</div>
+                    <div style="width:100%;height:${h}px;background:#007bff;border-radius:2px 2px 0 0;"></div>
+                    <div style="font-size:9px;color:#999;margin-top:4px;transform:rotate(-45deg);white-space:nowrap;">${d.date.slice(5)}</div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('keyStatsTable').innerHTML = (keyStats || []).map(s => `
+                <tr><td>${s.api_key_id}</td><td>${s.key_prefix || '-'}</td><td>${s.tokens.toLocaleString()}</td></tr>
+            `).join('');
+        }
+
+        document.getElementById('tenantForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await fetch('/api/tenants', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: document.getElementById('tenantName').value
+                })
+            });
+            hideTenantModal();
+            loadTenants();
+        });
+
+        // 初始加载
+        loadKeys();
+    </script>
+</body>
+</html>
