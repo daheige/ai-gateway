@@ -16,12 +16,14 @@ import (
 	service2 "ai-gateway/internal/service"
 )
 
+// GatewayHandler gateway网关handler
 type GatewayHandler struct {
 	db              *gorm.DB
 	apiKeyService   *service2.APIKeyService
 	providerService *service2.ProviderService
 }
 
+// NewGatewayHandler 创建gateway handler
 func NewGatewayHandler(db *gorm.DB, apiKeyService *service2.APIKeyService, providerService *service2.ProviderService) *GatewayHandler {
 	return &GatewayHandler{
 		db:              db,
@@ -36,13 +38,21 @@ func (h *GatewayHandler) Proxy(c *gin.Context) {
 	keyHash := c.GetString("key_hash")
 	keyEntity, err := h.apiKeyService.GetByHash(keyHash)
 	if err != nil {
+		log.Printf("get key by hash error: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API Key"})
 		return
 	}
 
 	bodyBytes, _ := io.ReadAll(c.Request.Body)
+
+	// 这里可以定义结构体进一步优化这里 todo
 	var reqBody map[string]interface{}
-	json.Unmarshal(bodyBytes, &reqBody)
+	err = json.Unmarshal(bodyBytes, &reqBody)
+	if err != nil {
+		log.Printf("unmarshal request body error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+	}
+
 	model := reqBody["model"].(string)
 	reqBody = nil
 
@@ -52,6 +62,7 @@ func (h *GatewayHandler) Proxy(c *gin.Context) {
 		return
 	}
 
+	// 得到真正的apikey
 	realAPIKey, err := h.providerService.DecryptAPIKey(provider.APIKeyEnc)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Decrypt failed"})
@@ -64,13 +75,13 @@ func (h *GatewayHandler) Proxy(c *gin.Context) {
 	}
 	url += "chat/completions"
 
-	log.Println("url:", url)
-	log.Println("body:", string(bodyBytes))
-	log.Println("realAPIKey: ", realAPIKey)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
+	// log.Println("url:", url)
+	// log.Println("body:", string(bodyBytes))
+	// log.Println("realAPIKey: ", realAPIKey)
+	ctx := c.Request.Context()
+	req, _ := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+realAPIKey)
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -78,9 +89,14 @@ func (h *GatewayHandler) Proxy(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
+	// 读取body内容
 	respBody, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
-	json.Unmarshal(respBody, &result)
+	err = json.Unmarshal(respBody, &result)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	tokens, promptTokens, compTokens := 0, 0, 0
 	if usage, ok := result["usage"].(map[string]interface{}); ok {

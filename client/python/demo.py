@@ -3,7 +3,7 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    api_key="sk-18aa2daa62984619916d1007356ae176",
+    api_key="sk-xxx",
     base_url="http://localhost:8080/v1")
 
 response = client.chat.completions.create(

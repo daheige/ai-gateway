@@ -1,4 +1,7 @@
 -- AI Gateway 数据库表结构
+create database ai_gateway charset utf8mb4;
+
+use ai_gateway;
 
 -- 租户表
 CREATE TABLE `tenants` (

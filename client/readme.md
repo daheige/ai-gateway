@@ -2,7 +2,7 @@
 ```shell
 curl http://127.0.0.1:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk-18aa2daa62984619916d1007356ae176" \
+  -H "Authorization: Bearer sk-xxx" \
   -d '{
         "model": "deepseek-chat",
         "messages": [
@@ -12,3 +12,6 @@ curl http://127.0.0.1:8080/v1/chat/completions \
         "stream": false
       }'
 ```
+
+# go sdk
+https://github.com/voocel/litellm

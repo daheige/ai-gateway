@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Provider 模型provider
 type Provider struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	Name      string         `gorm:"size:50;not null" json:"name"`
