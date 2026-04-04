@@ -6,14 +6,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ai-gateway/internal/service"
+	"ai-gateway/internal/application"
 )
 
+// StatsHandler 统计信息handler
 type StatsHandler struct {
-	service *service.StatsService
+	service *application.StatsService
 }
 
-func NewStatsHandler(service *service.StatsService) *StatsHandler {
+// NewStatsHandler 创建统计信息handler
+func NewStatsHandler(service *application.StatsService) *StatsHandler {
 	return &StatsHandler{service: service}
 }
 
@@ -24,6 +26,7 @@ func (h *StatsHandler) Overview(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	
 	c.JSON(http.StatusOK, overview)
 }
 
@@ -35,6 +38,7 @@ func (h *StatsHandler) DailyStats(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, stats)
 }
 
@@ -45,5 +49,6 @@ func (h *StatsHandler) KeyStats(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, stats)
 }

@@ -13,6 +13,8 @@ import (
 
 // NewRouter 创建路由
 func NewRouter(r *gin.Engine, handlers handler.Handlers, m middleware.Middlewares) {
+	r.Use(gin.Recovery())
+	r.Use(m.LogMiddleware)
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "hello, ai-gateway")
 	})
@@ -26,7 +28,7 @@ func NewRouter(r *gin.Engine, handlers handler.Handlers, m middleware.Middleware
 	r.POST("/auth/login", handlers.AuthHandler.Login)
 
 	api := r.Group("/api")
-	api.Use(m.AuthMiddleware)
+	api.Use(m.AdminAuthMiddleware)
 	{
 		api.POST("/keys", handlers.ApiKeyHandler.Create)
 		api.DELETE("/keys/:id", handlers.ApiKeyHandler.Delete)
@@ -45,10 +47,6 @@ func NewRouter(r *gin.Engine, handlers handler.Handlers, m middleware.Middleware
 	}
 
 	gw := r.Group("/v1")
-	gw.Use(m.MetricsMiddleware)
-	gw.Use(m.RateLimitMiddleware)
-	gw.Use(m.LogMiddleware)
-	{
-		gw.POST("/chat/completions", handlers.GatewayHandler.Proxy)
-	}
+	gw.Use(m.MetricsMiddleware, m.APIKeyAuthMiddleware, m.RateLimitMiddleware)
+	gw.POST("/chat/completions", handlers.GatewayHandler.Proxy)
 }

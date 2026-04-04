@@ -4,24 +4,27 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
-	"ai-gateway/internal/domain/entity"
+	"ai-gateway/internal/application"
 )
 
+// LogHandler 创建日志handler
 type LogHandler struct {
-	db *gorm.DB
+	logService *application.LogService
 }
 
-func NewLogHandler(db *gorm.DB) *LogHandler {
-	return &LogHandler{db: db}
+// NewLogHandler 创建log handler
+func NewLogHandler(logService *application.LogService) *LogHandler {
+	return &LogHandler{logService: logService}
 }
 
+// LogAuditRequest 设计日志请求
 type LogAuditRequest struct {
-	Limit int `form:"limit"`
-	Page  int `form:"page"`
+	Limit int `form:"limit" binding:"omitempty" json:"limit"`
+	Page  int `form:"page" binding:"required" json:"page"`
 }
 
+// List 日志列表
 func (h *LogHandler) List(c *gin.Context) {
 	var req LogAuditRequest
 	if err := c.ShouldBind(&req); err != nil {
@@ -36,14 +39,12 @@ func (h *LogHandler) List(c *gin.Context) {
 		req.Page = 1
 	}
 
-	var total int64
-	h.db.Model(&entity.RequestLog{}).Count(&total)
-
-	var logs []entity.RequestLog
-	h.db.Order("created_at desc").
-		Limit(req.Limit).
-		Offset((req.Page - 1) * req.Limit).
-		Find(&logs)
+	logs, total, err := h.logService.List(req.Limit, req.Page)
+	if err != nil {
+		// log.Println("err:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"total": total,

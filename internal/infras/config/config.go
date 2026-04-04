@@ -1,62 +1,69 @@
 package config
 
-import "time"
+import (
+	"log"
+	"time"
+
+	"github.com/go-god/setting"
+)
 
 // Config 项目配置结构体
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	Encrypt  EncryptConfig
-	Admin    AdminConfig
-}
+	AppEnv       string        `mapstructure:"app_env"`
+	AppDebug     string        `mapstructure:"app_debug"`
+	AppPort      int           `mapstructure:"app_port"`
+	GracefulWait time.Duration `mapstructure:"graceful_wait"`
 
-// ServerConfig 服务端口
-type ServerConfig struct {
-	Port string
+	Database DatabaseConfig `mapstructure:"database"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	Encrypt  EncryptConfig  `mapstructure:"encrypt"`
+	Admin    AdminConfig    `mapstructure:"admin"`
 }
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	DSN string
+	DSN     string `mapstructure:"dsn"`
+	ShowSQL bool   `mapstructure:"show_sql"`
 }
 
 // RedisConfig redis配置
 type RedisConfig struct {
-	Addr     string
-	Password string
-	DB       int
+	Addr     string `mapstructure:"addr"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
 }
 
 // JWTConfig jwt 认证key
 type JWTConfig struct {
-	Secret     string
-	ExpireTime time.Duration
+	Secret     string        `mapstructure:"secret"`
+	ExpireTime time.Duration `mapstructure:"expire_time"`
 }
 
 // EncryptConfig 加密key配置
 type EncryptConfig struct {
-	Key string
+	Key string `mapstructure:"key"`
 }
 
 // AdminConfig 管理员配置
 type AdminConfig struct {
-	Username string
-	Password string
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
 }
 
 // Load 加载配置
-// todo 这里应该哦组配置文件读取
 func Load() *Config {
-	var jwtKey = "2134bd00292111f1a5d3ff57c47c1333"
-	var encKey = "12345678901234567890123456789012"
-	return &Config{
-		Server:   ServerConfig{Port: ":8080"},
-		Database: DatabaseConfig{DSN: "root:root123456@tcp(127.0.0.1:3306)/ai_gateway?charset=utf8mb4&parseTime=True"},
-		Redis:    RedisConfig{Addr: "localhost:6379", Password: "", DB: 0},
-		JWT:      JWTConfig{Secret: jwtKey, ExpireTime: 24 * time.Hour},
-		Encrypt:  EncryptConfig{Key: encKey},
-		Admin:    AdminConfig{Username: "admin", Password: "admin123456"},
+	conf := setting.New(setting.WithConfigFile("./app.yaml"))
+	err := conf.Load()
+	if err != nil {
+		log.Fatalln("load config err: ", err)
 	}
+
+	c := &Config{}
+	err = conf.ReadSection("app_conf", c)
+	if err != nil {
+		log.Fatalln("read config err: ", err)
+	}
+
+	return c
 }

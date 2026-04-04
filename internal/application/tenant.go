@@ -1,38 +1,36 @@
-package service
+package application
 
 import (
-	"gorm.io/gorm"
-
 	"ai-gateway/internal/domain/entity"
+	"ai-gateway/internal/domain/repo"
 )
 
 type TenantService struct {
-	db *gorm.DB
+	tenantRepo repo.TenantRepository
 }
 
-func NewTenantService(db *gorm.DB) *TenantService {
-	return &TenantService{db: db}
+// NewTenantService 创建repo service
+func NewTenantService(tenantRepo repo.TenantRepository) *TenantService {
+	return &TenantService{tenantRepo: tenantRepo}
 }
 
 // Create 创建租户
 func (s *TenantService) Create(name string) error {
-	tenant := entity.Tenant{Name: name, Status: 1}
-	return s.db.Create(&tenant).Error
+	return s.tenantRepo.Create(name)
 }
 
 // List 租户列表
 func (s *TenantService) List() ([]entity.Tenant, error) {
-	var tenants []entity.Tenant
-	err := s.db.Find(&tenants).Error
+	tenants, err := s.tenantRepo.List()
 	return tenants, err
 }
 
 // Delete 删除租户
 func (s *TenantService) Delete(id uint) error {
-	return s.db.Delete(&entity.Tenant{}, id).Error
+	return s.tenantRepo.Delete(id)
 }
 
 // UpdateStatus 更新租户状态
 func (s *TenantService) UpdateStatus(id uint, status int) error {
-	return s.db.Model(&entity.Tenant{}).Where("id = ?", id).Update("status", status).Error
+	return s.tenantRepo.UpdateStatus(id, status)
 }

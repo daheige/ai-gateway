@@ -11,7 +11,7 @@ import (
 func main() {
 	client, err := litellm.NewWithProvider("deepseek", litellm.ProviderConfig{
 		// APIKey: os.Getenv("OPENAI_API_KEY"),
-		APIKey:  "sk-xxx",
+		APIKey:  "sk-6f950310-e3fc-43fe-a26c-96fd90a192a7",
 		BaseURL: "http://localhost:8080/v1", // 网关地址或真实的大模型provider base_url地址
 	})
 	if err != nil {

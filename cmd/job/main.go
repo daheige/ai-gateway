@@ -1,42 +1,50 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/redis/go-redis/v9"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-
+	"ai-gateway/cmd/job/tasks"
 	"ai-gateway/internal/infras/config"
-	"ai-gateway/internal/service"
 )
 
 func main() {
 	cfg := config.Load()
 
 	// 初始化db
-	db, err := gorm.Open(mysql.Open(cfg.Database.DSN), &gorm.Config{})
-	if err != nil {
-		log.Fatal("数据库连接失败:", err)
-	}
+	db := config.InitDB(cfg.Database)
+	defer config.CloseDB(db)
 
 	// 初始化redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr,
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
-	})
+	rdb := config.InitRedis(cfg.Redis)
+	defer func() {
+		_ = rdb.Close()
+	}()
 
-	job := service.NewTokenSyncJob(db, rdb)
+	job := tasks.NewTokenSyncJob(db, rdb)
 	job.Start()
-
 	log.Println("token-sync job is running...")
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("token-sync job stopped")
+
+	ctx, cancel := context.WithTimeout(context.Background(),
+		cfg.GracefulWait,
+	)
+	defer cancel()
+
+	go func() {
+		job.Stop()
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Printf("job shutdown ctx cancel error: %v", ctx.Err())
+	default:
+		log.Printf("job shutdown success")
+	}
 }

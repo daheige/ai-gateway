@@ -1,4 +1,4 @@
-package service
+package tasks
 
 import (
 	"context"
@@ -13,25 +13,41 @@ import (
 	"ai-gateway/internal/domain/entity"
 )
 
+// TokenSyncJob token 同步job
 type TokenSyncJob struct {
-	db  *gorm.DB
-	rdb redis.UniversalClient
+	db   *gorm.DB
+	rdb  redis.UniversalClient
+	stop chan struct{}
 }
 
+// NewTokenSyncJob 创建token同步job
 func NewTokenSyncJob(db *gorm.DB, rdb redis.UniversalClient) *TokenSyncJob {
-	return &TokenSyncJob{db: db, rdb: rdb}
+	return &TokenSyncJob{
+		db:   db,
+		rdb:  rdb,
+		stop: make(chan struct{}, 1),
+	}
 }
 
+// Start 启动job
 func (j *TokenSyncJob) Start() {
 	go func() {
-		j.sync()
+		j.sync() // 进入执行一次
+
 		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
-		for range ticker.C {
-			j.sync()
+
+		for {
+			select {
+			case <-ticker.C:
+				log.Println("token-sync job is running...")
+				j.sync()
+				log.Println("token-sync job is finished")
+			case <-j.stop:
+				return
+			}
 		}
 	}()
-	log.Println("[TokenSyncJob] started, interval: 1m")
 }
 
 func (j *TokenSyncJob) sync() {
@@ -43,14 +59,12 @@ func (j *TokenSyncJob) sync() {
 	// 1. 同步月度Token到Redis（用于限流）
 	var keys []entity.APIKey
 	j.db.Where("status = 1 AND monthly_token_limit > 0").Find(&keys)
-
 	for _, key := range keys {
 		var totalTokens int64
 		j.db.Model(&entity.RequestLog{}).
 			Where("api_key_id = ? AND created_at >= ?", key.ID, monthStart).
 			Select("COALESCE(SUM(tokens_used), 0)").
 			Scan(&totalTokens)
-
 		monthKey := fmt.Sprintf("monthly_tokens:%d", key.ID)
 		j.rdb.Set(ctx, monthKey, totalTokens, 5*time.Minute)
 	}
@@ -79,4 +93,9 @@ func (j *TokenSyncJob) sync() {
 			Date:     today,
 		})
 	}
+}
+
+// Stop 停止job
+func (j *TokenSyncJob) Stop() {
+	close(j.stop)
 }

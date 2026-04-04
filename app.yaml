@@ -1,0 +1,25 @@
+app_conf:
+  app_env: local # test/local/pro/alpha
+  app_port: 8080
+  graceful_wait: 5s
+
+  # 数据库配置
+  database:
+    dsn: "root:root123456@tcp(127.0.0.1:3306)/ai_gateway?charset=utf8mb4&parseTime=True"
+    show_sql: true
+  # redis配置
+  redis:
+    addr: localhost:6379
+    password: ""
+    db: 0
+  # jwt auth
+  jwt:
+    secret: 2134bd00292111f1a5d3ff57c47c1333
+    expire_time: 24h
+  # 加密配置
+  encrypt:
+    key: 12345678901234567890123456789012
+  # 管理员配置
+  admin:
+    username: admin
+    password: admin123456

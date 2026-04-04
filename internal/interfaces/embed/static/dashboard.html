@@ -246,7 +246,7 @@
                     <td>${k.name}</td>
                     <td>${k.key_prefix}</td>
                     <td>${k.rate_limit_per_sec === 0 ? '不限' : k.rate_limit_per_sec}</td>
-                    <td>${k.rate_limit}</td>
+                    <td>${k.rate_limit_per_min === 0 ? '不限' : k.rate_limit_per_min}</td>
                     <td>${k.monthly_token_limit === 0 ? '不限' : k.monthly_token_limit.toLocaleString()}</td>
                     <td>${k.total_token_quota === 0 ? '不限' : k.tokens_consumed.toLocaleString() + '/' + k.total_token_quota.toLocaleString()}</td>
                     <td>${k.status === 1 ? '启用' : '禁用'}</td>

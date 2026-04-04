@@ -9,12 +9,14 @@ import (
 	"ai-gateway/internal/infras/utils"
 )
 
+// AuthHandler auth认证hanlder
 type AuthHandler struct {
 	admin     config.AdminConfig
 	jwtSecret string
 	jwtExpire int64
 }
 
+// NewAuthHandler 创建 auth handler
 func NewAuthHandler(admin config.AdminConfig, secret string, expire int64) *AuthHandler {
 	return &AuthHandler{admin: admin, jwtSecret: secret, jwtExpire: expire}
 }

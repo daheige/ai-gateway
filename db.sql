@@ -19,7 +19,7 @@ CREATE TABLE `tenants` (
 CREATE TABLE `api_keys` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `tenant_id` bigint unsigned NOT NULL COMMENT '租户ID',
-  `key_hash` varchar(64) NOT NULL COMMENT 'API密钥哈希',
+  `key_hash` varchar(200) NOT NULL COMMENT 'API密钥哈希',
   `key_prefix` varchar(20) DEFAULT NULL COMMENT 'API密钥前缀',
   `name` varchar(100) DEFAULT NULL COMMENT '密钥名称',
   `provider_id` bigint unsigned DEFAULT NULL COMMENT 'Provider ID',
