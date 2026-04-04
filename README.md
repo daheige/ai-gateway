@@ -51,8 +51,7 @@ go run cmd/job/main.go
 
 ## API接口
 
-### 认证接口
-- POST /auth/register - 用户注册
+### 管理后台认证
 - POST /auth/login - 用户登录
 
 ### API Key管理
@@ -61,8 +60,23 @@ go run cmd/job/main.go
 - DELETE /api/keys/:id - 删除API Key
 
 ### 网关代理
-- POST /v1/chat/completions - AI模型请求代理
+- POST /v1/chat/completions - AI模型请求代理，基于basic认证
 - 请求demo见client中代码
+
+### curl请求方式
+```shell
+curl http://127.0.0.1:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxx" \
+  -d '{
+        "model": "deepseek-chat",
+        "messages": [
+          {"role": "system", "content": "You are a helpful assistant."},
+          {"role": "user", "content": "go语言是什么"}
+        ],
+        "stream": false
+      }'
+```
 
 # 管理后台
 访问地址：localhost:8080/admin 输入用户名和密码登录即可
