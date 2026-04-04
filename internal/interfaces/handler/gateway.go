@@ -51,6 +51,7 @@ func (h *GatewayHandler) Proxy(c *gin.Context) {
 	if err != nil {
 		log.Printf("unmarshal request body error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
 	}
 
 	model := reqBody["model"].(string)
