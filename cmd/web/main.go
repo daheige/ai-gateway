@@ -36,7 +36,7 @@ func main() {
 	repos := providers.NewRepositories(db)
 	// 创建服务
 	apiKeyService := application.NewAPIKeyService(repos.APIKeyRepo, rdb, cfg.Encrypt.Key)
-	providerService := application.NewProviderService(repos.ProviderRepo, cfg.Encrypt.Key)
+	providerService := application.NewProviderService(repos.ProviderRepo, rdb, cfg.Encrypt.Key)
 	tenantService := application.NewTenantService(repos.TenantRepo)
 	statsService := application.NewStatsService(repos.StatsRepo)
 	logService := application.NewLogService(repos.LogRepo)

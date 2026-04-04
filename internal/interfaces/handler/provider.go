@@ -56,7 +56,8 @@ func (h *ProviderHandler) List(c *gin.Context) {
 // Delete 删除provider
 func (h *ProviderHandler) Delete(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	if err := h.service.Delete(uint(id)); err != nil {
+	ctx := c.Request.Context()
+	if err := h.service.Delete(ctx, uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

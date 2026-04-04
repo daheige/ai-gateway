@@ -16,7 +16,7 @@ func InitDB(conf DatabaseConfig) *gorm.DB {
 		dbConfig.Logger = logger.Default.LogMode(logger.Info)
 	}
 
-	db, err := gorm.Open(mysql.Open(conf.DSN))
+	db, err := gorm.Open(mysql.Open(conf.DSN), dbConfig)
 	if err != nil {
 		log.Fatalln("failed to open db err:", err)
 	}

@@ -87,7 +87,9 @@ func (s *APIKeyService) GetByHash(keyHash string) (*entity.APIKey, error) {
 }
 
 // UpdateTokenConsume 更新tokens消费
+// UPDATE `api_keys` SET `tokens_consumed`=tokens_consumed + 430 WHERE id = 3 AND `api_keys`.`deleted_at` IS NULL
 func (s *APIKeyService) UpdateTokenConsume(id uint, tokens int) error {
+	// todo 这里可以通过redis hash计数器+job定时任务，将增量数同步到db中，降低数据库压力
 	return s.apikeyRepo.UpdateTokenConsume(id, tokens)
 }
 

@@ -17,6 +17,7 @@ func NewLogService(logRepo repo.LogRepository) *LogService {
 
 // Create 创建日志
 func (l *LogService) Create(entry *entity.RequestLog) error {
+	// todo 这里日志插入，可以将其丢入redis list或kafka mq中，然后通过异步job来消费
 	return l.logRepo.Create(entry)
 }
 

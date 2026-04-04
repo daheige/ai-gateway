@@ -56,7 +56,7 @@ func (h *GatewayHandler) Proxy(c *gin.Context) {
 	model := reqBody["model"].(string)
 	reqBody = nil
 
-	provider, err := h.providerService.GetByID(keyEntity.ProviderID)
+	provider, err := h.providerService.GetByID(ctx, keyEntity.ProviderID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider not found"})
 		return

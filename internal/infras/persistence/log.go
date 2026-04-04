@@ -1,8 +1,6 @@
 package persistence
 
 import (
-	"log"
-
 	"gorm.io/gorm"
 
 	"ai-gateway/internal/domain/entity"
@@ -34,13 +32,14 @@ func (l *LogRepoImpl) List(limit int, page int) ([]entity.RequestLog, int64, err
 		return []entity.RequestLog{}, 0, nil
 	}
 
-	log.Println("total:", total)
+	// log.Println("total:", total)
 	var logs []entity.RequestLog
 	err = l.db.Order("id desc").
 		Limit(limit).
 		Offset((page - 1) * limit).
 		Find(&logs).Error
-	log.Println("logs:", logs, "err:", err)
+
+	// log.Println("logs:", logs, "err:", err)
 	if err != nil {
 		return nil, 0, err
 	}
