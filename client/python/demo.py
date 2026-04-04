@@ -3,8 +3,9 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    api_key="sk-xxx",
-    base_url="http://localhost:8080/v1")
+    api_key="sk-xxx", # 虚拟apikey或真实的apikey
+    base_url="http://localhost:8080/v1" # 网关地址或真实的provider base_url
+)
 
 response = client.chat.completions.create(
     model="deepseek-chat",
